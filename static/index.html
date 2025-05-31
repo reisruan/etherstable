@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Verificador Ethereum</title>
+</head>
+<body>
+    <h1>Consultar Wallet ou TXID</h1>
+    <form action="/verificar" method="post">
+        <label for="tipo">Tipo:</label>
+        <select name="tipo" id="tipo">
+            <option value="wallet">Carteira</option>
+            <option value="txid">TXID</option>
+        </select>
+        <br><br>
+        <label for="valor">Endereço ou TXID:</label>
+        <input type="text" name="valor" id="valor" required>
+        <br><br>
+        <button type="submit">Consultar</button>
+    </form>
+</body>
+</html>
