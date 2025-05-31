@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" >
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Verificador Ethereum</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
   <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
     <h1 class="text-2xl font-bold text-center mb-6 text-gray-800">🔎 Verificador Ethereum</h1>
-    <form action="/verificar" method="post" class="space-y-4">
+    <form id="consultaForm" class="space-y-4">
       <div>
         <label for="tipo" class="block mb-1 font-semibold text-gray-700">Tipo de consulta:</label>
         <select name="tipo" id="tipo" class="w-full p-2 border border-gray-300 rounded-lg">
@@ -25,6 +25,68 @@
         Consultar
       </button>
     </form>
+
+    <div id="resultado" class="mt-6 p-4 border rounded-lg bg-gray-50 text-gray-700 hidden"></div>
   </div>
+
+  <script>
+    const form = document.getElementById('consultaForm');
+    const resultadoDiv = document.getElementById('resultado');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      resultadoDiv.classList.add('hidden');
+      resultadoDiv.textContent = 'Carregando...';
+      resultadoDiv.classList.remove('hidden');
+
+      const tipo = form.tipo.value;
+      const valor = form.valor.value.trim();
+
+      // Monta o body do POST (como form data)
+      const formData = new FormData();
+      formData.append('tipo', tipo);
+      formData.append('valor', valor);
+
+      try {
+        const response = await fetch('/verificar', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error(`Erro na requisição: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        // Exibir resultado formatado
+        if (tipo === 'wallet') {
+          if (data.status === '1') {
+            // saldo vem em wei, converte para ether
+            const balanceWei = data.result;
+            const balanceEth = balanceWei / 1e18;
+            resultadoDiv.innerHTML = `<strong>Saldo da carteira:</strong> ${balanceEth.toFixed(6)} ETH`;
+          } else {
+            resultadoDiv.textContent = `Erro: ${data.message || 'Consulta falhou.'}`;
+          }
+        } else if (tipo === 'txid') {
+          if (data.status === '1') {
+            const status = data.result.status === '1' ? 
+              '<span class="text-green-600 font-semibold">Sucesso</span>' : 
+              '<span class="text-red-600 font-semibold">Falha</span>';
+            resultadoDiv.innerHTML = `<strong>Status da transação:</strong> ${status}`;
+          } else {
+            resultadoDiv.textContent = `Erro: ${data.message || 'Consulta falhou.'}`;
+          }
+        } else {
+          resultadoDiv.textContent = 'Tipo inválido.';
+        }
+
+      } catch (err) {
+        resultadoDiv.textContent = `Erro: ${err.message}`;
+      }
+    });
+  </script>
 </body>
 </html>
