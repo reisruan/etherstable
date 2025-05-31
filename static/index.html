@@ -1,22 +1,30 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>Verificador Ethereum</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Verificador Ethereum</title>
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-    <h1>Consultar Wallet ou TXID</h1>
-    <form action="/verificar" method="post">
-        <label for="tipo">Tipo:</label>
-        <select name="tipo" id="tipo">
-            <option value="wallet">Carteira</option>
-            <option value="txid">TXID</option>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+  <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
+    <h1 class="text-2xl font-bold text-center mb-6 text-gray-800">🔎 Verificador Ethereum</h1>
+    <form action="/verificar" method="post" class="space-y-4">
+      <div>
+        <label for="tipo" class="block mb-1 font-semibold text-gray-700">Tipo de consulta:</label>
+        <select name="tipo" id="tipo" class="w-full p-2 border border-gray-300 rounded-lg">
+          <option value="wallet">Carteira (Wallet)</option>
+          <option value="txid">Transação (TXID)</option>
         </select>
-        <br><br>
-        <label for="valor">Endereço ou TXID:</label>
-        <input type="text" name="valor" id="valor" required>
-        <br><br>
-        <button type="submit">Consultar</button>
+      </div>
+      <div>
+        <label for="valor" class="block mb-1 font-semibold text-gray-700">Endereço ou Hash:</label>
+        <input type="text" name="valor" id="valor" required class="w-full p-2 border border-gray-300 rounded-lg" />
+      </div>
+      <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition">
+        Consultar
+      </button>
     </form>
+  </div>
 </body>
 </html>
