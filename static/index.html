@@ -30,63 +30,64 @@
   </div>
 
   <script>
-    const form = document.getElementById('consultaForm');
-    const resultadoDiv = document.getElementById('resultado');
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
+  resultadoDiv.classList.add('hidden');
+  resultadoDiv.textContent = 'Carregando...';
+  resultadoDiv.classList.remove('hidden');
 
-      resultadoDiv.classList.add('hidden');
-      resultadoDiv.textContent = 'Carregando...';
-      resultadoDiv.classList.remove('hidden');
+  const tipo = form.tipo.value;
+  const valor = form.valor.value.trim();
 
-      const tipo = form.tipo.value;
-      const valor = form.valor.value.trim();
+  const formData = new FormData();
+  formData.append('tipo', tipo);
+  formData.append('valor', valor);
 
-      // Monta o body do POST (como form data)
-      const formData = new FormData();
-      formData.append('tipo', tipo);
-      formData.append('valor', valor);
-
-      try {
-        const response = await fetch('/verificar', {
-          method: 'POST',
-          body: formData
-        });
-
-        if (!response.ok) {
-          throw new Error(`Erro na requisição: ${response.status}`);
-        }
-
-        const data = await response.json();
-
-        // Exibir resultado formatado
-        if (tipo === 'wallet') {
-          if (data.status === '1') {
-            // saldo vem em wei, converte para ether
-            const balanceWei = data.result;
-            const balanceEth = balanceWei / 1e18;
-            resultadoDiv.innerHTML = `<strong>Saldo da carteira:</strong> ${balanceEth.toFixed(6)} ETH`;
-          } else {
-            resultadoDiv.textContent = `Erro: ${data.message || 'Consulta falhou.'}`;
-          }
-        } else if (tipo === 'txid') {
-          if (data.status === '1') {
-            const status = data.result.status === '1' ? 
-              '<span class="text-green-600 font-semibold">Sucesso</span>' : 
-              '<span class="text-red-600 font-semibold">Falha</span>';
-            resultadoDiv.innerHTML = `<strong>Status da transação:</strong> ${status}`;
-          } else {
-            resultadoDiv.textContent = `Erro: ${data.message || 'Consulta falhou.'}`;
-          }
-        } else {
-          resultadoDiv.textContent = 'Tipo inválido.';
-        }
-
-      } catch (err) {
-        resultadoDiv.textContent = `Erro: ${err.message}`;
-      }
+  try {
+    const response = await fetch('/verificar', {
+      method: 'POST',
+      body: formData
     });
+
+    if (!response.ok) {
+      throw new Error(`Erro na requisição: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (tipo === 'wallet') {
+      if (data.status === '1') {
+        resultadoDiv.innerHTML = `
+          <strong>Saldo da carteira:</strong> ${data.balance_eth.toFixed(6)} ETH<br/>
+          <strong>Número de transações:</strong> ${data.tx_count}
+        `;
+      } else {
+        resultadoDiv.textContent = `Erro: ${data.message || 'Consulta falhou.'}`;
+      }
+    } else if (tipo === 'txid') {
+      if (data.status === '1') {
+        const statusColor = data.tx_status === 'Success' ? 'text-green-600' : 'text-red-600';
+        resultadoDiv.innerHTML = `
+          <strong>Hash da transação:</strong> ${data.tx_hash}<br/>
+          <strong>Status:</strong> <span class="${statusColor} font-semibold">${data.tx_status}</span><br/>
+          <strong>De:</strong> ${data.from}<br/>
+          <strong>Para:</strong> ${data.to}<br/>
+          <strong>Valor:</strong> ${data.value_eth.toFixed(6)} ETH<br/>
+          <strong>Bloco:</strong> ${data.block_number || 'Desconhecido'}
+        `;
+      } else {
+        resultadoDiv.textContent = `Erro: ${data.message || 'Consulta falhou.'}`;
+      }
+    } else {
+      resultadoDiv.textContent = 'Tipo inválido.';
+    }
+
+  } catch (err) {
+    resultadoDiv.textContent = `Erro: ${err.message}`;
+  }
+});
+
   </script>
 </body>
 </html>
