@@ -1,80 +1,148 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Verificador Ethereum</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 text-gray-800 min-h-screen flex flex-col items-center p-6">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verificador Blockchain</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 
-  <div class="w-full max-w-xl bg-white rounded-xl shadow-lg p-6 mt-10">
-    <h1 class="text-2xl font-bold mb-4 text-center text-blue-600">Verificador Ethereum</h1>
-
-    <form id="formulario" class="space-y-4">
-      <div>
-        <label for="tipo" class="block text-sm font-medium">Tipo de Verificação:</label>
-        <select id="tipo" name="tipo" class="w-full border rounded p-2">
-          <option value="wallet">Carteira (Wallet)</option>
-          <option value="txid">Transação (TXID)</option>
-        </select>
-      </div>
-
-      <div>
-        <label for="valor" class="block text-sm font-medium">Endereço ou TXID:</label>
-        <input type="text" id="valor" name="valor" required class="w-full border rounded p-2" placeholder="Digite o endereço ou TXID" />
-      </div>
-
-      <button type="submit" class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition">
-        Verificar
-      </button>
-    </form>
-
-    <div id="resultado" class="mt-6 p-4 bg-gray-50 rounded hidden border border-gray-200"></div>
-  </div>
-
-  <script>
-    const form = document.getElementById('formulario');
-    const resultadoDiv = document.getElementById('resultado');
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const formData = new FormData(form);
-
-      try {
-        const response = await fetch('/verificar', {
-          method: 'POST',
-          body: formData
-        });
-
-        const data = await response.json();
-
-        if (formData.get("tipo") === "wallet") {
-          resultadoDiv.innerHTML = `
-            <h3 class="text-lg font-semibold text-green-600 mb-2">Resultado da Wallet</h3>
-            <p><strong>Saldo:</strong> ${data.balance_eth} ETH</p>
-            <p><strong>Total de Transações:</strong> ${data.tx_count}</p>
-          `;
-        } else {
-          resultadoDiv.innerHTML = `
-            <h3 class="text-lg font-semibold text-green-600 mb-2">Resultado da Transação</h3>
-            <p><strong>Status:</strong> ${data.tx_status}</p>
-            <p><strong>De:</strong> ${data.from}</p>
-            <p><strong>Para:</strong> ${data.to}</p>
-            <p><strong>Valor:</strong> ${data.value_eth} ETH</p>
-          `;
+    <style>
+        body {
+            background-color: #f4f4f4;
         }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen">
 
-        resultadoDiv.classList.remove('hidden');
+    <div class="bg-white shadow-lg rounded-xl p-8 w-full max-w-xl">
 
-      } catch (error) {
-        resultadoDiv.innerHTML = `
-          <p class="text-red-600">Erro ao consultar. Verifique o endereço/TXID e tente novamente.</p>
-        `;
-        resultadoDiv.classList.remove('hidden');
-      }
-    });
-  </script>
+        <h1 class="text-2xl font-bold mb-4 text-center">🔍 Verificador Blockchain</h1>
+
+        <form id="form-verificacao" class="space-y-4">
+
+            <!-- Tipo da consulta -->
+            <div>
+                <label class="font-semibold">Tipo de consulta:</label>
+                <select id="tipo" name="tipo" class="w-full border p-2 rounded">
+                    <option value="wallet">Wallet</option>
+                    <option value="txid">TxID</option>
+                </select>
+            </div>
+
+            <!-- Valor: endereço ou txid -->
+            <div>
+                <label class="font-semibold">Valor:</label>
+                <input id="valor" name="valor" type="text" class="w-full border p-2 rounded"
+                       placeholder="Endereço ou TxHash" required>
+            </div>
+
+            <!-- Seleção da Blockchain -->
+            <div>
+                <label class="font-semibold">Blockchain:</label>
+                <select id="chain" name="chain" class="w-full border p-2 rounded">
+                    <optgroup label="Ethereum">
+                        <option value="1">Ethereum Mainnet</option>
+                        <option value="11155111">Sepolia Testnet</option>
+                        <option value="17000">Holesky Testnet</option>
+                    </optgroup>
+
+                    <optgroup label="Arbitrum">
+                        <option value="42161">Arbitrum One</option>
+                        <option value="42170">Arbitrum Nova</option>
+                        <option value="421614">Arbitrum Sepolia</option>
+                    </optgroup>
+
+                    <optgroup label="Polygon">
+                        <option value="137">Polygon Mainnet</option>
+                        <option value="80002">Polygon Amoy Testnet</option>
+                    </optgroup>
+
+                    <optgroup label="Base">
+                        <option value="8453">Base Mainnet</option>
+                        <option value="84532">Base Sepolia</option>
+                    </optgroup>
+
+                    <optgroup label="BNB Smart Chain">
+                        <option value="56">BSC Mainnet</option>
+                        <option value="97">BSC Testnet</option>
+                    </optgroup>
+
+                    <optgroup label="zkSync">
+                        <option value="324">zkSync Mainnet</option>
+                        <option value="300">zkSync Sepolia</option>
+                    </optgroup>
+
+                    <optgroup label="Gnosis">
+                        <option value="100">Gnosis Chain</option>
+                    </optgroup>
+
+                    <optgroup label="Celo">
+                        <option value="42220">Celo Mainnet</option>
+                        <option value="11142220">Celo Sepolia</option>
+                    </optgroup>
+                </select>
+            </div>
+
+            <!-- Submeter -->
+            <button type="submit"
+                class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition">
+                Verificar
+            </button>
+        </form>
+
+        <!-- Resultados -->
+        <div id="resultado" class="mt-6 hidden p-4 bg-gray-100 rounded"></div>
+
+    </div>
+
+    <script>
+        const form = document.getElementById("form-verificacao");
+        const resultadoDiv = document.getElementById("resultado");
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(form);
+
+            // Envia o CHAIN ID junto com a verificação
+            formData.append("chainid", document.getElementById("chain").value);
+
+            const response = await fetch("/verificar", {
+                method: "POST",
+                body: formData
+            });
+
+            const data = await response.json();
+
+            resultadoDiv.classList.remove("hidden");
+
+            if (data.erro) {
+                resultadoDiv.innerHTML = `
+                    <p class="text-red-600 font-semibold">Erro: ${data.mensagem}</p>
+                `;
+                return;
+            }
+
+            // Montar exibição dos dados
+            let html = `<h2 class="text-lg font-bold mb-2">Resultado:</h2>`;
+
+            if (formData.get("tipo") === "wallet") {
+                html += `
+                    <p><strong>Balance:</strong> ${data.balance_eth} ETH</p>
+                    <p><strong>Total de Transações:</strong> ${data.tx_count}</p>
+                `;
+            } else {
+                html += `
+                    <p><strong>Status:</strong> ${data.tx_status}</p>
+                    <p><strong>From:</strong> ${data.from}</p>
+                    <p><strong>To:</strong> ${data.to}</p>
+                    <p><strong>Valor:</strong> ${data.value_eth} ETH</p>
+                `;
+            }
+
+            resultadoDiv.innerHTML = html;
+        });
+    </script>
+
 </body>
 </html>
