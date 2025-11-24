@@ -29,7 +29,7 @@ async def home(request: Request):
 #  FUNÇÃO PARA CONSULTAR WALLET
 # ----------------------------------------------------------
 def consultar_wallet(endereco: str):
-    url_balance = "https://api.etherscan.io/api"
+    url_balance = "https://api.etherscan.io/v2/api"
     params_balance = {
         "module": "account",
         "action": "balance",
@@ -48,7 +48,7 @@ def consultar_wallet(endereco: str):
     balance_eth = balance_wei / 10**18
 
     # PEGAR TOTAL DE TRANSAÇÕES
-    url_txcount = "https://api.etherscan.io/api"
+    url_txcount = "https://api.etherscan.io/v2/api"
     params_tx = {
         "module": "proxy",
         "action": "eth_getTransactionCount",
@@ -79,7 +79,7 @@ def consultar_wallet(endereco: str):
 #  FUNÇÃO PARA CONSULTAR TRANSAÇÃO
 # ----------------------------------------------------------
 def consultar_txid(txid: str):
-    url = "https://api.etherscan.io/api"
+    url = "https://api.etherscan.io/v2/api"
     params = {
         "module": "proxy",
         "action": "eth_getTransactionByHash",
