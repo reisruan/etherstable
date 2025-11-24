@@ -1,77 +1,130 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Block Explorer</title>
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blockchain Checker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 text-gray-900">
-    <header class="bg-white shadow p-4">
-        <div class="container mx-auto flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-blue-600">Multi-Chain Explorer</h1>
-            <nav class="space-x-4">
-                <a href="#" class="text-gray-700 hover:text-blue-600">Home</a>
-                <a href="#" class="text-gray-700 hover:text-blue-600">Sobre</a>
-            </nav>
-        </div>
-    </header>
+<body class="bg-gray-100 min-h-screen text-gray-800">
 
-    <main class="container mx-auto mt-8">
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="max-w-5xl mx-auto py-10">
+        <h1 class="text-3xl font-bold mb-6 text-center">Blockchain Explorer Lite</h1>
 
-            <!-- Card Consulta -->
-            <div class="md:col-span-1 bg-white p-6 rounded-xl shadow">
-                <h2 class="text-xl font-semibold mb-4">Consultar</h2>
-                <form id="formConsulta" class="space-y-4">
-                    <select id="chain" name="chain" class="w-full p-2 border rounded">
-                        <option value="1">Ethereum Mainnet</option>
-                        <option value="8453">Base Mainnet</option>
-                        <option value="137">Polygon Mainnet</option>
+        <!-- CARD DO FORM -->
+        <div class="bg-white shadow-lg rounded-xl p-6 mb-8">
+            <form id="formulario" class="space-y-4">
+
+                <!-- Tipo -->
+                <div>
+                    <label class="font-medium">Tipo de Consulta</label>
+                    <select id="tipo" name="tipo" class="w-full border rounded-lg px-3 py-2">
+                        <option value="wallet">Carteira (Wallet)</option>
+                        <option value="txid">Transação (TXID)</option>
                     </select>
-
-                    <select id="tipo" name="tipo" class="w-full p-2 border rounded">
-                        <option value="wallet">Wallet</option>
-                        <option value="txid">Transaction</option>
-                        <option value="history">Histórico</option>
-                    </select>
-
-                    <input id="valor" name="valor" type="text" placeholder="Endereço ou TXID" class="w-full p-2 border rounded" />
-
-                    <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Consultar</button>
-                </form>
-            </div>
-
-            <!-- Resultado -->
-            <div class="md:col-span-2 bg-white p-6 rounded-xl shadow" id="resultado">
-                <h2 class="text-xl font-semibold mb-4">Resultado</h2>
-                <div id="output" class="text-sm text-gray-800">
-                    Nenhuma consulta realizada ainda.
                 </div>
-            </div>
+
+                <!-- Chain -->
+                <div>
+                    <label class="font-medium">Rede (Chain)</label>
+                    <select id="chain" name="chain" class="w-full border rounded-lg px-3 py-2">
+                        <option value="1">Ethereum Mainnet</option>
+                        <option value="11155111">Sepolia Testnet</option>
+                        <option value="17000">Holesky Testnet</option>
+                        <option value="137">Polygon</option>
+                    </select>
+                </div>
+
+                <!-- Valor -->
+                <div>
+                    <label class="font-medium">Endereço ou TXID</label>
+                    <input id="valor" name="valor" type="text" placeholder="0x..." class="w-full border rounded-lg px-3 py-2" />
+                </div>
+
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white w-full py-3 rounded-lg font-semibold">Consultar</button>
+            </form>
         </div>
-    </main>
 
-    <script>
-        document.getElementById("formConsulta").addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const tipo = document.getElementById("tipo").value;
-            const valor = document.getElementById("valor").value;
-            const chain = document.getElementById("chain").value;
+        <!-- CARD DE RESULTADO -->
+        <div id="resultado" class="hidden bg-white shadow-lg rounded-xl p-6"></div>
+    </div>
 
-            const formData = new FormData();
-            formData.append("tipo", tipo);
-            formData.append("valor", valor);
-            formData.append("chainid", chain);
+<script>
+    const form = document.getElementById("formulario");
+    const resultadoBox = document.getElementById("resultado");
 
-            const response = await fetch("/verificar", {
-                method: "POST",
-                body: formData,
-            });
+    form.addEventListener("submit", async (e) => {
+        e.preventDefault();
 
-            const data = await response.json();
-            document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+        const formData = new FormData(form);
+        resultadoBox.classList.remove("hidden");
+        resultadoBox.innerHTML = "<p class='text-center text-gray-500'>Carregando...</p>";
+
+        const response = await fetch("/verificar", {
+            method: "POST",
+            body: formData
         });
-    </script>
+
+        const dados = await response.json();
+
+        if (dados.erro) {
+            resultadoBox.innerHTML = `
+                <div class='text-red-600 font-semibold'>Erro: ${dados.mensagem}</div>
+            `;
+            return;
+        }
+
+        // Renderiza bonito conforme o tipo
+        const tipo = formData.get("tipo");
+
+        if (tipo === "wallet") {
+            resultadoBox.innerHTML = `
+                <h2 class="text-xl font-bold mb-4">Resultado da Carteira</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="p-4 border rounded-lg">
+                        <p class="text-gray-500 text-sm">Saldo (ETH)</p>
+                        <p class="text-2xl font-bold">${dados.balance_eth.toFixed(6)}</p>
+                    </div>
+
+                    <div class="p-4 border rounded-lg">
+                        <p class="text-gray-500 text-sm">Total de Transações</p>
+                        <p class="text-2xl font-bold">${dados.tx_count}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (tipo === "txid") {
+            resultadoBox.innerHTML = `
+                <h2 class="text-xl font-bold mb-4">Detalhes da Transação</h2>
+
+                <div class="space-y-4">
+                    <div class="p-4 border rounded-lg">
+                        <p class="text-gray-500 text-sm">Status</p>
+                        <p class="text-lg font-semibold">${dados.tx_status}</p>
+                    </div>
+
+                    <div class="p-4 border rounded-lg break-all">
+                        <p class="text-gray-500 text-sm">De</p>
+                        <p>${dados.from}</p>
+                    </div>
+
+                    <div class="p-4 border rounded-lg break-all">
+                        <p class="text-gray-500 text-sm">Para</p>
+                        <p>${dados.to}</p>
+                    </div>
+
+                    <div class="p-4 border rounded-lg">
+                        <p class="text-gray-500 text-sm">Valor (ETH)</p>
+                        <p class="text-xl font-bold">${dados.value_eth.toFixed(6)}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+    });
+</script>
+
 </body>
 </html>
