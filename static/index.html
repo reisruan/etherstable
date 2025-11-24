@@ -3,88 +3,75 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Blockchain Explorer</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
-        h2 { color: #222; }
-        label { font-weight: bold; }
-        input, select { padding: 8px; width: 300px; margin-top: 5px; }
-        button { padding: 10px 20px; margin-top: 15px; cursor: pointer; }
-        #result { margin-top: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 0 10px #ccc; }
-        .loading { color: #555; font-style: italic; }
-    </style>
+    <title>Block Explorer</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" />
 </head>
-<body>
-    <h2>Transaction History Lookup</h2>
+<body class="bg-gray-100 text-gray-900">
+    <header class="bg-white shadow p-4">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-blue-600">Multi-Chain Explorer</h1>
+            <nav class="space-x-4">
+                <a href="#" class="text-gray-700 hover:text-blue-600">Home</a>
+                <a href="#" class="text-gray-700 hover:text-blue-600">Sobre</a>
+            </nav>
+        </div>
+    </header>
 
-    <label for="address">Wallet Address</label><br>
-    <input type="text" id="address" placeholder="0x..." /><br><br>
+    <main class="container mx-auto mt-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-    <label for="chainid">Select Chain</label><br>
-    <select id="chainid">
-        <option value="1">Ethereum Mainnet</option>
-        <option value="11155111">Sepolia Testnet</option>
-        <option value="42161">Arbitrum One</option>
-        <option value="10">OP Mainnet</option>
-        <option value="8453">Base Mainnet</option>
-        <option value="137">Polygon Mainnet</option>
-        <option value="56">BNB Smart Chain</option>
-        <option value="324">zkSync Mainnet</option>
-        <!-- Add others as needed -->
-    </select><br><br>
+            <!-- Card Consulta -->
+            <div class="md:col-span-1 bg-white p-6 rounded-xl shadow">
+                <h2 class="text-xl font-semibold mb-4">Consultar</h2>
+                <form id="formConsulta" class="space-y-4">
+                    <select id="chain" name="chain" class="w-full p-2 border rounded">
+                        <option value="1">Ethereum Mainnet</option>
+                        <option value="8453">Base Mainnet</option>
+                        <option value="137">Polygon Mainnet</option>
+                    </select>
 
-    <button onclick="fetchHistory()">Search Transactions</button>
+                    <select id="tipo" name="tipo" class="w-full p-2 border rounded">
+                        <option value="wallet">Wallet</option>
+                        <option value="txid">Transaction</option>
+                        <option value="history">Histórico</option>
+                    </select>
 
-    <div id="result"></div>
+                    <input id="valor" name="valor" type="text" placeholder="Endereço ou TXID" class="w-full p-2 border rounded" />
+
+                    <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Consultar</button>
+                </form>
+            </div>
+
+            <!-- Resultado -->
+            <div class="md:col-span-2 bg-white p-6 rounded-xl shadow" id="resultado">
+                <h2 class="text-xl font-semibold mb-4">Resultado</h2>
+                <div id="output" class="text-sm text-gray-800">
+                    Nenhuma consulta realizada ainda.
+                </div>
+            </div>
+        </div>
+    </main>
 
     <script>
-        async function fetchHistory() {
-            const address = document.getElementById("address").value.trim();
-            const chainid = document.getElementById("chainid").value;
-            const resultDiv = document.getElementById("result");
+        document.getElementById("formConsulta").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const tipo = document.getElementById("tipo").value;
+            const valor = document.getElementById("valor").value;
+            const chain = document.getElementById("chain").value;
 
-            if (!address) {
-                resultDiv.innerHTML = "<p style='color:red'>Please enter a wallet address.</p>";
-                return;
-            }
+            const formData = new FormData();
+            formData.append("tipo", tipo);
+            formData.append("valor", valor);
+            formData.append("chainid", chain);
 
-            resultDiv.innerHTML = "<p class='loading'>Loading transaction history...</p>";
+            const response = await fetch("/verificar", {
+                method: "POST",
+                body: formData,
+            });
 
-            try {
-                const response = await fetch(`/transactions?address=${address}&chainid=${chainid}`);
-                const data = await response.json();
-
-                if (data.error) {
-                    resultDiv.innerHTML = `<p style='color:red'>${data.error}</p>`;
-                    return;
-                }
-
-                if (!data.result || data.result.length === 0) {
-                    resultDiv.innerHTML = "<p>No transactions found.</p>";
-                    return;
-                }
-
-                let html = `<h3>Transaction History</h3>`;
-                html += `<table border='1' cellpadding='6' style='border-collapse: collapse;'>`;
-                html += `<tr><th>Hash</th><th>From</th><th>To</th><th>Value (ETH)</th><th>Timestamp</th></tr>`;
-
-                data.result.forEach(tx => {
-                    html += `<tr>
-                        <td>${tx.hash}</td>
-                        <td>${tx.from}</td>
-                        <td>${tx.to}</td>
-                        <td>${tx.value}</td>
-                        <td>${tx.timeStamp}</td>
-                    </tr>`;
-                });
-
-                html += `</table>`;
-                resultDiv.innerHTML = html;
-
-            } catch (e) {
-                resultDiv.innerHTML = `<p style='color:red'>Request failed: ${e}</p>`;
-            }
-        }
+            const data = await response.json();
+            document.getElementById("output").textContent = JSON.stringify(data, null, 2);
+        });
     </script>
 </body>
 </html>
