@@ -1,77 +1,155 @@
-import requests
-from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, Form, Request
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+import requests
+import os
 
 app = FastAPI()
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+# API KEY
+ETHERSCAN_API_KEY = os.getenv("ETHERSCAN_API_KEY", "AGXEZ2RJDVU2FAGABN96USWWVBPNC4UCFH")
 
+# TEMPLATES
 templates = Jinja2Templates(directory="static")
 
-ETHERSCAN_API_KEY = "AGXEZ2RJDVU2FAGABN96USWWVBPNC4UCFH"
+# STATIC FILES
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
+# ----------------------------------------------------------
+#  HOME PAGE
+# ----------------------------------------------------------
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
+async def home(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+
+# ----------------------------------------------------------
+#  FUNÇÃO PARA CONSULTAR WALLET
+# ----------------------------------------------------------
+def consultar_wallet(endereco: str):
+    url_balance = "https://api.etherscan.io/api"
+    params_balance = {
+        "module": "account",
+        "action": "balance",
+        "address": endereco,
+        "apikey": ETHERSCAN_API_KEY
+    }
+
+    response = requests.get(url_balance, params=params_balance)
+    data = response.json()
+
+    # Verifica se o result é numérico
+    if not isinstance(data.get("result"), str) or not data.get("result").isdigit():
+        return {"erro": True, "mensagem": f"Erro da API: {data}"}
+
+    balance_wei = int(data["result"])
+    balance_eth = balance_wei / 10**18
+
+    # PEGAR TOTAL DE TRANSAÇÕES
+    url_txcount = "https://api.etherscan.io/api"
+    params_tx = {
+        "module": "proxy",
+        "action": "eth_getTransactionCount",
+        "address": endereco,
+        "tag": "latest",
+        "apikey": ETHERSCAN_API_KEY
+    }
+
+    response_tx = requests.get(url_txcount, params=params_tx)
+    data_tx = response_tx.json()
+
+    if "result" not in data_tx:
+        return {"erro": True, "mensagem": f"Erro da API ao buscar TX count: {data_tx}"}
+
+    try:
+        tx_count = int(data_tx["result"], 16)
+    except:
+        tx_count = 0
+
+    return {
+        "erro": False,
+        "balance_eth": balance_eth,
+        "tx_count": tx_count
+    }
+
+
+# ----------------------------------------------------------
+#  FUNÇÃO PARA CONSULTAR TRANSAÇÃO
+# ----------------------------------------------------------
+def consultar_txid(txid: str):
+    url = "https://api.etherscan.io/api"
+    params = {
+        "module": "proxy",
+        "action": "eth_getTransactionByHash",
+        "txhash": txid,
+        "apikey": ETHERSCAN_API_KEY
+    }
+
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    tx = data.get("result")
+
+    # SE RESULTADO NÃO FOR DICIONÁRIO → ERRO DA API
+    if not isinstance(tx, dict):
+        return {"erro": True, "mensagem": f"Resposta inesperada da API: {tx}"}
+
+    # CAMPOS DA TRANSAÇÃO
+    from_addr = tx.get("from", "desconhecido")
+    to_addr = tx.get("to", "desconhecido")
+    value_hex = tx.get("value", "0x0")
+
+    try:
+        value_wei = int(value_hex, 16)
+        value_eth = value_wei / 10**18
+    except:
+        value_eth = 0
+
+    # PEGAR STATUS DA TRANSACTION RECEIPT
+    params_status = {
+        "module": "proxy",
+        "action": "eth_getTransactionReceipt",
+        "txhash": txid,
+        "apikey": ETHERSCAN_API_KEY
+    }
+
+    response_status = requests.get(url, params=params_status)
+    data_status = response_status.json()
+    receipt = data_status.get("result", {})
+
+    status = receipt.get("status", "0x0")
+    tx_status = "Sucesso" if status == "0x1" else "Falha"
+
+    return {
+        "erro": False,
+        "tx_status": tx_status,
+        "from": from_addr,
+        "to": to_addr,
+        "value_eth": value_eth
+    }
+
+
+# ----------------------------------------------------------
+#  ROTA /VERIFICAR
+# ----------------------------------------------------------
 @app.post("/verificar")
 async def verificar(tipo: str = Form(...), valor: str = Form(...)):
-    if tipo == "wallet":
-        # Consulta saldo e número de transações
-        url_balance = (
-            f"https://api.etherscan.io/api?module=account&action=balance&address={valor}&tag=latest&apikey={ETHERSCAN_API_KEY}"
-        )
-        url_txcount = (
-            f"https://api.etherscan.io/api?module=proxy&action=eth_getTransactionCount&address={valor}&tag=latest&apikey={ETHERSCAN_API_KEY}"
-        )
-        res_balance = requests.get(url_balance).json()
-        res_txcount = requests.get(url_txcount).json()
+    try:
+        if tipo == "wallet":
+            resultado = consultar_wallet(valor)
 
-        if res_balance.get("status") == "1" and "result" in res_balance and "result" in res_txcount:
-            balance_wei = int(res_balance["result"])
-            tx_count = int(res_txcount["result"], 16)  # hex to int
-            return {
-                "status": "1",
-                "balance_wei": balance_wei,
-                "balance_eth": balance_wei / 1e18,
-                "tx_count": tx_count,
-            }
+        elif tipo == "txid":
+            resultado = consultar_txid(valor)
+
         else:
-            return {"status": "0", "message": "Erro ao consultar carteira."}
+            return JSONResponse({"erro": True, "mensagem": "Tipo inválido."})
 
-    elif tipo == "txid":
-        # Consulta detalhes da transação
-        url_tx = (
-            f"https://api.etherscan.io/api?module=proxy&action=eth_getTransactionByHash&txhash={valor}&apikey={ETHERSCAN_API_KEY}"
-        )
-        url_receipt = (
-            f"https://api.etherscan.io/api?module=proxy&action=eth_getTransactionReceipt&txhash={valor}&apikey={ETHERSCAN_API_KEY}"
-        )
-        res_tx = requests.get(url_tx).json()
-        res_receipt = requests.get(url_receipt).json()
+        return JSONResponse(resultado)
 
-        if "result" in res_tx and res_tx["result"] and "result" in res_receipt and res_receipt["result"]:
-            tx = res_tx["result"]
-            receipt = res_receipt["result"]
-
-            value_wei = int(tx["value"], 16)
-            block_number = int(tx["blockNumber"], 16) if tx["blockNumber"] else None
-            status = receipt["status"] if "status" in receipt else None
-
-            return {
-                "status": "1",
-                "tx_hash": valor,
-                "from": tx["from"],
-                "to": tx["to"],
-                "value_wei": value_wei,
-                "value_eth": value_wei / 1e18,
-                "block_number": block_number,
-                "tx_status": "Success" if status == "0x1" else "Fail",
-            }
-        else:
-            return {"status": "0", "message": "Transação não encontrada."}
-
-    else:
-        return {"status": "0", "message": "Tipo inválido."}
+    except Exception as e:
+        return JSONResponse({
+            "erro": True,
+            "mensagem": f"Erro interno: {str(e)}"
+        })
