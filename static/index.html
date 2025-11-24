@@ -1,148 +1,90 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Verificador Blockchain</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blockchain Explorer</title>
     <style>
-        body {
-            background-color: #f4f4f4;
-        }
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f7f7f7; }
+        h2 { color: #222; }
+        label { font-weight: bold; }
+        input, select { padding: 8px; width: 300px; margin-top: 5px; }
+        button { padding: 10px 20px; margin-top: 15px; cursor: pointer; }
+        #result { margin-top: 20px; background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 0 10px #ccc; }
+        .loading { color: #555; font-style: italic; }
     </style>
 </head>
-<body class="flex items-center justify-center min-h-screen">
+<body>
+    <h2>Transaction History Lookup</h2>
 
-    <div class="bg-white shadow-lg rounded-xl p-8 w-full max-w-xl">
+    <label for="address">Wallet Address</label><br>
+    <input type="text" id="address" placeholder="0x..." /><br><br>
 
-        <h1 class="text-2xl font-bold mb-4 text-center">🔍 Verificador Blockchain</h1>
+    <label for="chainid">Select Chain</label><br>
+    <select id="chainid">
+        <option value="1">Ethereum Mainnet</option>
+        <option value="11155111">Sepolia Testnet</option>
+        <option value="42161">Arbitrum One</option>
+        <option value="10">OP Mainnet</option>
+        <option value="8453">Base Mainnet</option>
+        <option value="137">Polygon Mainnet</option>
+        <option value="56">BNB Smart Chain</option>
+        <option value="324">zkSync Mainnet</option>
+        <!-- Add others as needed -->
+    </select><br><br>
 
-        <form id="form-verificacao" class="space-y-4">
+    <button onclick="fetchHistory()">Search Transactions</button>
 
-            <!-- Tipo da consulta -->
-            <div>
-                <label class="font-semibold">Tipo de consulta:</label>
-                <select id="tipo" name="tipo" class="w-full border p-2 rounded">
-                    <option value="wallet">Wallet</option>
-                    <option value="txid">TxID</option>
-                </select>
-            </div>
-
-            <!-- Valor: endereço ou txid -->
-            <div>
-                <label class="font-semibold">Valor:</label>
-                <input id="valor" name="valor" type="text" class="w-full border p-2 rounded"
-                       placeholder="Endereço ou TxHash" required>
-            </div>
-
-            <!-- Seleção da Blockchain -->
-            <div>
-                <label class="font-semibold">Blockchain:</label>
-                <select id="chain" name="chain" class="w-full border p-2 rounded">
-                    <optgroup label="Ethereum">
-                        <option value="1">Ethereum Mainnet</option>
-                        <option value="11155111">Sepolia Testnet</option>
-                        <option value="17000">Holesky Testnet</option>
-                    </optgroup>
-
-                    <optgroup label="Arbitrum">
-                        <option value="42161">Arbitrum One</option>
-                        <option value="42170">Arbitrum Nova</option>
-                        <option value="421614">Arbitrum Sepolia</option>
-                    </optgroup>
-
-                    <optgroup label="Polygon">
-                        <option value="137">Polygon Mainnet</option>
-                        <option value="80002">Polygon Amoy Testnet</option>
-                    </optgroup>
-
-                    <optgroup label="Base">
-                        <option value="8453">Base Mainnet</option>
-                        <option value="84532">Base Sepolia</option>
-                    </optgroup>
-
-                    <optgroup label="BNB Smart Chain">
-                        <option value="56">BSC Mainnet</option>
-                        <option value="97">BSC Testnet</option>
-                    </optgroup>
-
-                    <optgroup label="zkSync">
-                        <option value="324">zkSync Mainnet</option>
-                        <option value="300">zkSync Sepolia</option>
-                    </optgroup>
-
-                    <optgroup label="Gnosis">
-                        <option value="100">Gnosis Chain</option>
-                    </optgroup>
-
-                    <optgroup label="Celo">
-                        <option value="42220">Celo Mainnet</option>
-                        <option value="11142220">Celo Sepolia</option>
-                    </optgroup>
-                </select>
-            </div>
-
-            <!-- Submeter -->
-            <button type="submit"
-                class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition">
-                Verificar
-            </button>
-        </form>
-
-        <!-- Resultados -->
-        <div id="resultado" class="mt-6 hidden p-4 bg-gray-100 rounded"></div>
-
-    </div>
+    <div id="result"></div>
 
     <script>
-        const form = document.getElementById("form-verificacao");
-        const resultadoDiv = document.getElementById("resultado");
+        async function fetchHistory() {
+            const address = document.getElementById("address").value.trim();
+            const chainid = document.getElementById("chainid").value;
+            const resultDiv = document.getElementById("result");
 
-        form.addEventListener("submit", async (e) => {
-            e.preventDefault();
-
-            const formData = new FormData(form);
-
-            // Envia o CHAIN ID junto com a verificação
-            formData.append("chainid", document.getElementById("chain").value);
-
-            const response = await fetch("/verificar", {
-                method: "POST",
-                body: formData
-            });
-
-            const data = await response.json();
-
-            resultadoDiv.classList.remove("hidden");
-
-            if (data.erro) {
-                resultadoDiv.innerHTML = `
-                    <p class="text-red-600 font-semibold">Erro: ${data.mensagem}</p>
-                `;
+            if (!address) {
+                resultDiv.innerHTML = "<p style='color:red'>Please enter a wallet address.</p>";
                 return;
             }
 
-            // Montar exibição dos dados
-            let html = `<h2 class="text-lg font-bold mb-2">Resultado:</h2>`;
+            resultDiv.innerHTML = "<p class='loading'>Loading transaction history...</p>";
 
-            if (formData.get("tipo") === "wallet") {
-                html += `
-                    <p><strong>Balance:</strong> ${data.balance_eth} ETH</p>
-                    <p><strong>Total de Transações:</strong> ${data.tx_count}</p>
-                `;
-            } else {
-                html += `
-                    <p><strong>Status:</strong> ${data.tx_status}</p>
-                    <p><strong>From:</strong> ${data.from}</p>
-                    <p><strong>To:</strong> ${data.to}</p>
-                    <p><strong>Valor:</strong> ${data.value_eth} ETH</p>
-                `;
+            try {
+                const response = await fetch(`/transactions?address=${address}&chainid=${chainid}`);
+                const data = await response.json();
+
+                if (data.error) {
+                    resultDiv.innerHTML = `<p style='color:red'>${data.error}</p>`;
+                    return;
+                }
+
+                if (!data.result || data.result.length === 0) {
+                    resultDiv.innerHTML = "<p>No transactions found.</p>";
+                    return;
+                }
+
+                let html = `<h3>Transaction History</h3>`;
+                html += `<table border='1' cellpadding='6' style='border-collapse: collapse;'>`;
+                html += `<tr><th>Hash</th><th>From</th><th>To</th><th>Value (ETH)</th><th>Timestamp</th></tr>`;
+
+                data.result.forEach(tx => {
+                    html += `<tr>
+                        <td>${tx.hash}</td>
+                        <td>${tx.from}</td>
+                        <td>${tx.to}</td>
+                        <td>${tx.value}</td>
+                        <td>${tx.timeStamp}</td>
+                    </tr>`;
+                });
+
+                html += `</table>`;
+                resultDiv.innerHTML = html;
+
+            } catch (e) {
+                resultDiv.innerHTML = `<p style='color:red'>Request failed: ${e}</p>`;
             }
-
-            resultadoDiv.innerHTML = html;
-        });
+        }
     </script>
-
 </body>
 </html>
